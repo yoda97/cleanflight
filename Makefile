@@ -270,6 +270,7 @@ HIGHEND_SRC  = flight/autotune.c \
 		   telemetry/hott.c \
 		   telemetry/msp.c \
 		   telemetry/smartport.c \
+		   telemetry/mavlink.c \
 		   sensors/sonar.c \
 		   sensors/barometer.c \
 		   blackbox/blackbox.c \
