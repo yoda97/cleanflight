@@ -51,6 +51,11 @@ static rxConfig_t *rxConfig;
 
 static uint16_t deadband3dThrottle;           // default throttle deadband from MIDRC
 
+// FIXME ProDrone: The next 3 functions are stubs that must be deleted from here and declared in RTH.H file and defined in RTH.C
+rthState_e getStateOfForcedRTH(void) {return RTH_IDLE;}
+void activateForcedRTH(void) {}
+void abortForcedRTH(void) {}
+
 static void failsafeReset(void)
 {
     failsafeState.rxDataFailurePeriod = PERIOD_RXDATA_FAILURE + failsafeConfig->failsafe_delay * MILLIS_PER_TENTH_SECOND;
@@ -175,6 +180,7 @@ void failsafeUpdateState(void)
     }
 
     bool reprocessState;
+    bool rthIdleOrLanded;
 
     do {
         reprocessState = false;
@@ -220,10 +226,50 @@ void failsafeUpdateState(void)
                 if (receivingRxData) {
                     failsafeState.phase = FAILSAFE_RX_LOSS_RECOVERED;
                 } else {
-                    // Stabilize, and set Throttle to specified level
-                    failsafeActivate();
+                    switch (failsafeConfig->failsafe_procedure) {
+                        default:
+                        case FAILSAFE_PROCEDURE_AUTO_LANDING:
+                            // Stabilize, and set Throttle to specified level
+                            failsafeActivate();
+                            break;
+
+                        case FAILSAFE_PROCEDURE_RTH:
+                            // Proceed to handling & monitoring RTH navigation
+                            failsafeActivate();
+                            activateForcedRTH();
+                            failsafeState.phase = FAILSAFE_RETURN_TO_HOME;
+                            break;
+                    }
                 }
                 reprocessState = true;
+                break;
+
+            case FAILSAFE_RETURN_TO_HOME:
+                if (receivingRxData) {
+                    abortForcedRTH();
+                    failsafeState.phase = FAILSAFE_RX_LOSS_RECOVERED;
+                    reprocessState = true;
+                }
+                if (armed) {
+                    beeperMode = BEEPER_RX_LOST_LANDING;
+                }
+                switch (getStateOfForcedRTH()) {
+                    case RTH_IN_PROGRESS_OK:
+                    case RTH_IN_PROGRESS_LOST_GPS:
+                        rthIdleOrLanded = false;
+                        break;
+
+                    default:
+                    case RTH_IDLE:
+                    case RTH_HAS_LANDED:
+                        rthIdleOrLanded = true;
+                        break;
+                }
+                if (rthIdleOrLanded || !armed) {
+                    failsafeState.receivingRxDataPeriodPreset = PERIOD_OF_30_SECONDS; // require 30 seconds of valid rxData
+                    failsafeState.phase = FAILSAFE_LANDED;
+                    reprocessState = true;
+                }
                 break;
 
             case FAILSAFE_LANDING:
