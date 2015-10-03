@@ -20,30 +20,33 @@
 #include "flight/pid.h"
 
 extern int16_t throttleAngleCorrection;
-extern t_fp_vector EstG;
 extern int16_t accSmooth[XYZ_AXIS_COUNT];
 extern int16_t smallAngle;
-extern t_fp_vector imuAverageVelocity;
 extern t_fp_vector imuAverageAcceleration;
 
-typedef struct rollAndPitchInclination_s {
+#define DEGREES_TO_DECIDEGREES(angle) (angle * 10)
+#define DECIDEGREES_TO_DEGREES(angle) (angle / 10)
+#define DECIDEGREES_TO_RADIANS(angle) ((angle / 10.0f) * 0.0174532925f)
+
+typedef struct {
     // absolute angle inclination in multiple of 0.1 degree    180 deg = 1800
-    int16_t rollDeciDegrees;
-    int16_t pitchDeciDegrees;
-} rollAndPitchInclination_t_def;
+    int16_t roll;
+    int16_t pitch;
+    int16_t yaw;
+} attitudeEulerAngles_def_t;
 
 typedef union {
-    int16_t raw[ANGLE_INDEX_COUNT];
-    rollAndPitchInclination_t_def values;
-} rollAndPitchInclination_t;
+    int16_t raw[XYZ_AXIS_COUNT];
+    attitudeEulerAngles_def_t values;
+} attitudeEulerAngles_t;
 
-extern rollAndPitchInclination_t inclination;
+extern attitudeEulerAngles_t attitude;
 
 typedef struct imuRuntimeConfig_s {
     uint8_t acc_lpf_factor;
     uint8_t acc_unarmedcal;
-    float gyro_cmpf_factor;
-    float gyro_cmpfm_factor;
+    float dcm_ki;
+    float dcm_kp;
     uint8_t small_angle;
 } imuRuntimeConfig_t;
 

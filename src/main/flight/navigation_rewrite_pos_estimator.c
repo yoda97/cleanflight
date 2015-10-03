@@ -520,7 +520,8 @@ static void publishEstimatedTopic(uint32_t currentTime)
         }
     }
 
-    updateActualHeading((int32_t)heading * 100);
+    // IMU operates in decidegrees while INAV operates in centidegrees
+    updateActualHeading(attitude.values.yaw * 10);
 }
 
 /**

@@ -434,8 +434,8 @@ static void resetConf(void)
 
     // global settings
     masterConfig.current_profile_index = 0;     // default profile
-    masterConfig.gyro_cmpf_factor = 600;        // default MWC
-    masterConfig.gyro_cmpfm_factor = 250;       // default MWC
+    masterConfig.dcm_kp = 10000;                // 1.0 * 10000
+    masterConfig.dcm_ki = 30;                   // 0.003 * 10000
     masterConfig.gyro_lpf = 42;                 // supported by all gyro drivers now. In case of ST gyro, will default to 32Hz instead
 
     resetAccelerometerTrims(&masterConfig.accZero);
@@ -748,8 +748,8 @@ void activateConfig(void)
         &masterConfig.rxConfig
     );
 
-    imuRuntimeConfig.gyro_cmpf_factor = masterConfig.gyro_cmpf_factor;
-    imuRuntimeConfig.gyro_cmpfm_factor = masterConfig.gyro_cmpfm_factor;
+    imuRuntimeConfig.dcm_kp = masterConfig.dcm_kp / 10000.0f;
+    imuRuntimeConfig.dcm_ki = masterConfig.dcm_ki / 10000.0f;
     imuRuntimeConfig.acc_lpf_factor = currentProfile->acc_lpf_factor;
     imuRuntimeConfig.acc_unarmedcal = currentProfile->acc_unarmedcal;;
     imuRuntimeConfig.small_angle = masterConfig.small_angle;

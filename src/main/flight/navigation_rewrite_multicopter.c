@@ -206,7 +206,7 @@ void applyMulticopterAltitudeController(uint32_t currentTime)
     updateAltitudeThrottleController_MC(deltaMicros);
 
     uint16_t newThrottle = constrain(altholdInitialThrottle + posControl.rcAdjustment[THROTTLE], posControl.escAndServoConfig->minthrottle, posControl.escAndServoConfig->maxthrottle);
-    if (posControl.navConfig->flags.throttle_tilt_comp && isThrustFacingDownwards(&inclination)) {
+    if (posControl.navConfig->flags.throttle_tilt_comp && isThrustFacingDownwards()) {
         float tiltCompFactor = 1.0f / constrainf(calculateCosTiltAngle(), 0.6f, 1.0f);  // max tilt about 50 deg
         newThrottle *= tiltCompFactor;
     }
