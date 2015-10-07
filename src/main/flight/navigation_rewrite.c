@@ -312,16 +312,24 @@ void gpsConvertGeodeticToLocal(gpsOrigin_s * origin, gpsLocation_t * llh, t_fp_v
 
 void gpsConvertLocalToGeodetic(gpsOrigin_s * origin, t_fp_vector * pos, gpsLocation_t * llh)
 {
+    float scaleLonDown;
+
     if (origin->valid) {
-        llh->lat = origin->lat + lrintf(pos->V.X / DISTANCE_BETWEEN_TWO_LONGITUDE_POINTS_AT_EQUATOR);
-        llh->lon = origin->lon + lrintf(pos->V.Y / (DISTANCE_BETWEEN_TWO_LONGITUDE_POINTS_AT_EQUATOR * origin->scale));
-        llh->alt = origin->alt + lrintf(pos->V.Z);
+        llh->lat = origin->lat;
+        llh->lon = origin->lon;
+        llh->alt = origin->alt;
+        scaleLonDown = origin->scale;
     }
     else {
         llh->lat = 0;
         llh->lon = 0;
         llh->alt = 0;
+        scaleLonDown = 1.0f;
     }
+
+    llh->lat += lrintf(pos->V.X / DISTANCE_BETWEEN_TWO_LONGITUDE_POINTS_AT_EQUATOR);
+    llh->lon += lrintf(pos->V.Y / (DISTANCE_BETWEEN_TWO_LONGITUDE_POINTS_AT_EQUATOR * scaleLonDown));
+    llh->alt += lrintf(pos->V.Z);
 }
 
 /*-----------------------------------------------------------
