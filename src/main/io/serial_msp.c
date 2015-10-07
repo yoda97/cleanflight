@@ -651,10 +651,10 @@ void mspInit(serialConfig_t *serialConfig)
     if (sensors(SENSOR_BARO) || sensors(SENSOR_SONAR) || (isFixedWing && feature(FEATURE_GPS))) {
         activeBoxIds[activeBoxIdCount++] = BOXNAVALTHOLD;
     }
-    if ((feature(FEATURE_GPS) && sensors(SENSOR_MAG) && sensors(SENSOR_ACC)) || (isFixedWing && feature(FEATURE_GPS))) {
+    if ((feature(FEATURE_GPS) && sensors(SENSOR_MAG) && sensors(SENSOR_ACC)) || (isFixedWing && feature(FEATURE_GPS)) || (sensors(SENSOR_ACC) && masterConfig.navConfig.inav.enable_dead_reckoning)) {
         activeBoxIds[activeBoxIdCount++] = BOXNAVPOSHOLD;
     }
-    if ((feature(FEATURE_GPS) && sensors(SENSOR_ACC) && sensors(SENSOR_MAG) && (sensors(SENSOR_BARO) || sensors(SENSOR_SONAR))) || (isFixedWing && feature(FEATURE_GPS))) {
+    if ((feature(FEATURE_GPS) && sensors(SENSOR_ACC) && sensors(SENSOR_MAG) && (sensors(SENSOR_BARO) || sensors(SENSOR_SONAR))) || (isFixedWing && sensors(SENSOR_ACC) && feature(FEATURE_GPS))) {
         activeBoxIds[activeBoxIdCount++] = BOXNAVRTH;
         activeBoxIds[activeBoxIdCount++] = BOXNAVWP;
     }
