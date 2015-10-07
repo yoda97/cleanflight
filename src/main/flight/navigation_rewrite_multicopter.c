@@ -151,7 +151,7 @@ void resetMulticopterAltitudeController()
 
 void applyMulticopterAltitudeController(uint32_t currentTime)
 {
-    static uint32_t previousTimeTargetPositionUpdate;   // Occurs @ POSITION_TARGET_UPDATE_RATE_HZ
+    static navigationTimer_t targetPositionUpdateTimer; // Occurs @ POSITION_TARGET_UPDATE_RATE_HZ
     static uint32_t previousTimePositionUpdate;         // Occurs @ altitude sensor update rate (max MAX_ALTITUDE_UPDATE_RATE_HZ)
     static uint32_t previousTimeUpdate;                 // Occurs @ looptime rate
 
@@ -160,17 +160,16 @@ void applyMulticopterAltitudeController(uint32_t currentTime)
 
     // If last position update was too long in the past - ignore it (likely restarting altitude controller)
     if (deltaMicros > HZ2US(MIN_ALTITUDE_UPDATE_RATE_HZ)) {
+        resetTimer(&targetPositionUpdateTimer, currentTime);
         previousTimeUpdate = currentTime;
-        previousTimeTargetPositionUpdate = currentTime;
         previousTimePositionUpdate = currentTime;
         resetMulticopterAltitudeController();
         return;
     }
 
     // Update altitude target from RC input or RTL controller
-    if (currentTime - previousTimeTargetPositionUpdate >= HZ2US(POSITION_TARGET_UPDATE_RATE_HZ)) {
-        uint32_t deltaMicrosPositionTargetUpdate = currentTime - previousTimeTargetPositionUpdate;
-        previousTimeTargetPositionUpdate = currentTime;
+    if (updateTimer(&targetPositionUpdateTimer, HZ2US(POSITION_TARGET_UPDATE_RATE_HZ), currentTime)) {
+        uint32_t deltaMicrosPositionTargetUpdate = getTimerDeltaMicros(&targetPositionUpdateTimer);
 
         if (navShouldApplyAutonomousLandingLogic()) {
             // Gradually reduce descent speed depending on actual altitude.
@@ -489,7 +488,7 @@ static void updatePositionLeanAngleController_MC(void)
 
 void applyMulticopterPositionController(uint32_t currentTime)
 {
-    static uint32_t previousTimeTargetPositionUpdate;   // Occurs @ POSITION_TARGET_UPDATE_RATE_HZ
+    static navigationTimer_t targetPositionUpdateTimer; // Occurs @ POSITION_TARGET_UPDATE_RATE_HZ
     static uint32_t previousTimePositionUpdate;         // Occurs @ GPS update rate
     static uint32_t previousTimeUpdate;                 // Occurs @ looptime rate
 
@@ -498,8 +497,8 @@ void applyMulticopterPositionController(uint32_t currentTime)
 
     // If last position update was too long in the past - ignore it (likely restarting position controller)
     if (deltaMicros > HZ2US(MIN_POSITION_UPDATE_FREQUENCY_HZ)) {
+        resetTimer(&targetPositionUpdateTimer, currentTime);
         previousTimeUpdate = currentTime;
-        previousTimeTargetPositionUpdate = currentTime;
         previousTimePositionUpdate = currentTime;
         resetMulticopterPositionController();
         return;
@@ -509,8 +508,7 @@ void applyMulticopterPositionController(uint32_t currentTime)
     // and pilots input would be passed thru to PID controller
     if (posControl.flags.hasValidPositionSensor) {
         // Update position target from RC input
-        if (currentTime - previousTimeTargetPositionUpdate >= HZ2US(POSITION_TARGET_UPDATE_RATE_HZ)) {
-            previousTimeTargetPositionUpdate = currentTime;
+        if (updateTimer(&targetPositionUpdateTimer, HZ2US(POSITION_TARGET_UPDATE_RATE_HZ), currentTime)) {
             updatePositionTargetFromRCInput_MC();
         }
 

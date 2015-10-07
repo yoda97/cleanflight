@@ -134,6 +134,11 @@ typedef struct navigationFlags_s {
 } navigationFlags_t;
 
 typedef struct {
+    uint32_t    lastTriggeredTime;
+    uint32_t    deltaTime;
+} navigationTimer_t;
+
+typedef struct {
     float kP;
     float kI;
     float kD;
@@ -221,6 +226,11 @@ typedef struct {
 } navigationPosControl_t;
 
 extern navigationPosControl_t posControl;
+
+/* Timer infrastructure */
+bool updateTimer(navigationTimer_t * tim, uint32_t interval, uint32_t currentTime);
+#define resetTimer(tim, currentTime) { (tim)->deltaTime = 0; (tim)->lastTriggeredTime = currentTime; }
+#define getTimerDeltaMicros(tim) ((tim)->deltaTime)
 
 /* Internally used functions */
 float navApplyFilter(float input, float fCut, float dT, float * state);
