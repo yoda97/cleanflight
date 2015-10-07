@@ -253,40 +253,36 @@ void onNewGPSData(int32_t newLat, int32_t newLon, int32_t newAlt)
  */
 static void updateBaroTopic(uint32_t currentTime)
 {
+    static navigationTimer_t baroUpdateTimer;
     static filterWithBufferSample_t baroClimbRateFilterBuffer[NAV_BARO_CLIMB_RATE_FILTER_SIZE];
     static filterWithBufferState_t baroClimbRateFilter;
     static bool climbRateFiltersInitialized = false;
-    static uint32_t previousTimeUpdate = 0;
-    uint32_t deltaMicros = currentTime - previousTimeUpdate;
 
-    if (deltaMicros < HZ2US(INAV_BARO_UPDATE_RATE))
-        return;
+    if (updateTimer(&baroUpdateTimer, HZ2US(INAV_BARO_UPDATE_RATE), currentTime)) {
+        if (!climbRateFiltersInitialized) {
+            filterWithBufferInit(&baroClimbRateFilter, &baroClimbRateFilterBuffer[0], NAV_BARO_CLIMB_RATE_FILTER_SIZE);
+            climbRateFiltersInitialized = true;
+        }
 
-    previousTimeUpdate = currentTime;
+        float newBaroAlt = baroCalculateAltitude();
+        if (sensors(SENSOR_BARO) && isBaroCalibrationComplete()) {
+            filterWithBufferUpdate(&baroClimbRateFilter, newBaroAlt, currentTime);
+            float baroClimbRate = filterWithBufferApply_Derivative(&baroClimbRateFilter) * 1e6f;
 
-    if (!climbRateFiltersInitialized) {
-        filterWithBufferInit(&baroClimbRateFilter, &baroClimbRateFilterBuffer[0], NAV_BARO_CLIMB_RATE_FILTER_SIZE);
-        climbRateFiltersInitialized = true;
-    }
+            // FIXME: do we need this?
+            baroClimbRate = constrainf(baroClimbRate, -1500, 1500);  // constrain baro velocity +/- 1500cm/s
+            baroClimbRate = applyDeadband(baroClimbRate, 10);       // to reduce noise near zero
 
-    float newBaroAlt = baroCalculateAltitude();
-    if (sensors(SENSOR_BARO) && isBaroCalibrationComplete()) {
-        filterWithBufferUpdate(&baroClimbRateFilter, newBaroAlt, currentTime);
-        float baroClimbRate = filterWithBufferApply_Derivative(&baroClimbRateFilter) * 1e6f;
-
-        // FIXME: do we need this?
-        baroClimbRate = constrainf(baroClimbRate, -1500, 1500);  // constrain baro velocity +/- 1500cm/s
-        baroClimbRate = applyDeadband(baroClimbRate, 10);       // to reduce noise near zero
-
-        posEstimator.baro.alt = newBaroAlt;
-        posEstimator.baro.vel = baroClimbRate;
-        posEstimator.baro.epv = posControl.navConfig->inav.baro_epv;
-        posEstimator.baro.lastUpdateTime = currentTime;
-    }
-    else {
-        posEstimator.baro.alt = 0;
-        posEstimator.baro.vel = 0;
-        posEstimator.baro.lastUpdateTime = 0;
+            posEstimator.baro.alt = newBaroAlt;
+            posEstimator.baro.vel = baroClimbRate;
+            posEstimator.baro.epv = posControl.navConfig->inav.baro_epv;
+            posEstimator.baro.lastUpdateTime = currentTime;
+        }
+        else {
+            posEstimator.baro.alt = 0;
+            posEstimator.baro.vel = 0;
+            posEstimator.baro.lastUpdateTime = 0;
+        }
     }
 }
 #endif
@@ -298,39 +294,35 @@ static void updateBaroTopic(uint32_t currentTime)
  */
 static void updateSonarTopic(uint32_t currentTime)
 {
+    static navigationTimer_t sonarUpdateTimer;
     static float previousSonarAlt = -1;
-    static uint32_t previousTimeUpdate = 0;
-    uint32_t deltaMicros = currentTime - previousTimeUpdate;
 
-    if (deltaMicros < HZ2US(INAV_SONAR_UPDATE_RATE))
-        return;
+    if (updateTimer(&sonarUpdateTimer, HZ2US(INAV_SONAR_UPDATE_RATE), currentTime)) {
+        if (sensors(SENSOR_SONAR)) {
+            /* Read sonar */
+            float newSonarAlt = sonarRead();
 
-    previousTimeUpdate = currentTime;
+            newSonarAlt = sonarCalculateAltitude(newSonarAlt, calculateCosTiltAngle());
 
-    if (sensors(SENSOR_SONAR)) {
-        /* Read sonar */
-        float newSonarAlt = sonarRead();
+            /* If we have two valid sonar readings in a row - update topic */
+            if (newSonarAlt > 0 && previousSonarAlt > 0) {
+                posEstimator.sonar.alt = (newSonarAlt + previousSonarAlt) * 0.5f;
+                posEstimator.sonar.vel = (newSonarAlt - previousSonarAlt) / US2S(getTimerDeltaMicros(&sonarUpdateTimer));
+                posEstimator.sonar.epv = posControl.navConfig->inav.sonar_epv;
+                posEstimator.sonar.lastUpdateTime = currentTime;
+            }
 
-        newSonarAlt = sonarCalculateAltitude(newSonarAlt, calculateCosTiltAngle());
-
-        /* If we have two valid sonar readings in a row - update topic */
-        if (newSonarAlt > 0 && previousSonarAlt > 0) {
-            posEstimator.sonar.alt = (newSonarAlt + previousSonarAlt) * 0.5f;
-            posEstimator.sonar.vel = (newSonarAlt - previousSonarAlt) / US2S(deltaMicros);
-            posEstimator.sonar.epv = posControl.navConfig->inav.sonar_epv;
-            posEstimator.sonar.lastUpdateTime = currentTime;
+            /* Store current reading as previous */
+            previousSonarAlt = newSonarAlt;
         }
+        else {
+            /* No sonar */
+            posEstimator.sonar.alt = 0;
+            posEstimator.sonar.vel = 0;
+            posEstimator.sonar.lastUpdateTime = 0;
 
-        /* Store current reading as previous */
-        previousSonarAlt = newSonarAlt;
-    }
-    else {
-        /* No sonar */
-        posEstimator.sonar.alt = 0;
-        posEstimator.sonar.vel = 0;
-        posEstimator.sonar.lastUpdateTime = 0;
-
-        previousSonarAlt = -1;
+            previousSonarAlt = -1;
+        }
     }
 }
 #endif
@@ -511,12 +503,9 @@ static void updateEstimatedTopic(uint32_t currentTime)
  */
 static void publishEstimatedTopic(uint32_t currentTime)
 {
-    static bool lastPositionPublishTime;
+    static navigationTimer_t posPublishTimer;
 
-    /* Publish position update and set position validity, do this at a fixed but reduced rate */
-    if ((currentTime - lastPositionPublishTime) >= HZ2US(INAV_POSITION_PUBLISH_RATE_HZ)) {
-        lastPositionPublishTime = currentTime;
-
+    if (updateTimer(&posPublishTimer, HZ2US(INAV_POSITION_PUBLISH_RATE_HZ), currentTime)) {
         if (posEstimator.est.eph < posControl.navConfig->inav.max_eph_epv) {
             updateActualHorizontalPositionAndVelocity(posEstimator.est.pos.V.X, posEstimator.est.pos.V.Y, posEstimator.est.vel.V.X, posEstimator.est.vel.V.Y);
             posControl.flags.hasValidPositionSensor = true;

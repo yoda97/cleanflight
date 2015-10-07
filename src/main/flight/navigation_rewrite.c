@@ -87,6 +87,18 @@ uint16_t navFlags;
 
 static navigationMode_t selectNavModeFromBoxModeInput(void);
 
+bool updateTimer(navigationTimer_t * tim, uint32_t interval, uint32_t currentTime)
+{
+    if ((currentTime - tim->lastTriggeredTime) >= interval) {
+        tim->deltaTime = currentTime - tim->lastTriggeredTime;
+        tim->lastTriggeredTime = currentTime;
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
 /*-----------------------------------------------------------
  * A simple 1-st order LPF filter implementation
  *-----------------------------------------------------------*/
