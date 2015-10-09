@@ -217,6 +217,9 @@ void resetNavConfig(navConfig_t * navConfig)
     navConfig->flags.rth_alt_control_style = NAV_RTH_AT_LEAST_ALT;
 
     // Inertial position estimator parameters
+#if defined(INAV_ENABLE_AUTO_MAG_DECLINATION)
+    navConfig->inav.automatic_mag_declination = 1;
+#endif
     navConfig->inav.enable_dead_reckoning = 0;
     navConfig->inav.gps_delay_ms = 200;
 

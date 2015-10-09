@@ -32,6 +32,9 @@
 #define NAV_BLACKBOX
 #endif
 
+// Features
+#define INAV_ENABLE_AUTO_MAG_DECLINATION
+
 // Maximum number of waypoints, special waypoint 0 = home,
 #define NAV_MAX_WAYPOINTS       15
 
@@ -76,6 +79,9 @@ typedef struct navConfig_s {
     } flags;
 
     struct {
+#if defined(INAV_ENABLE_AUTO_MAG_DECLINATION)
+        uint8_t automatic_mag_declination;
+#endif
         uint8_t enable_dead_reckoning;
         uint16_t gps_delay_ms;
 
@@ -161,8 +167,9 @@ float getEstimatedActualPosition(int axis);
 void getWaypoint(uint8_t wpNumber, int32_t * wpLat, int32_t * wpLon, int32_t * wpAlt);
 void setWaypoint(uint8_t wpNumber, int32_t wpLat, int32_t wpLon, int32_t wpAlt);
 
-void gpsConvertGeodeticToLocal(gpsOrigin_s * origin, gpsLocation_t * llh, t_fp_vector * pos);
-void gpsConvertLocalToGeodetic(gpsOrigin_s * origin, t_fp_vector * pos, gpsLocation_t * llh);
+void geoConvertGeodeticToLocal(gpsOrigin_s * origin, gpsLocation_t * llh, t_fp_vector * pos);
+void geoConvertLocalToGeodetic(gpsOrigin_s * origin, t_fp_vector * pos, gpsLocation_t * llh);
+float geoCalculateMagDeclination(gpsLocation_t * llh); // degrees units
 
 bool canActivateForcedRTH(void);
 void activateForcedRTH(void);

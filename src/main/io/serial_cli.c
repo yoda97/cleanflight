@@ -369,6 +369,11 @@ const clivalue_t valueTable[] = {
 #endif
 
 #ifdef NAV
+
+#if defined(INAV_ENABLE_AUTO_MAG_DECLINATION)
+    { "inav_auto_mag_decl",         VAR_UINT8  | MASTER_VALUE, &masterConfig.navConfig.inav.automatic_mag_declination, 0, 1 },
+#endif
+
     { "inav_dead_reckoning",        VAR_UINT8  | MASTER_VALUE, &masterConfig.navConfig.inav.enable_dead_reckoning, 0, 1 },
     { "inav_gps_delay",             VAR_UINT16 | MASTER_VALUE, &masterConfig.navConfig.inav.gps_delay_ms, 0, 500 },
 
