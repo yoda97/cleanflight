@@ -480,8 +480,8 @@ static void updateEstimatedTopic(uint32_t currentTime)
 #if defined(INAV_ENABLE_DEAD_RECKONING)
         /* Use dead reckoning */
         if (useDeadReckoning) {
-            inavFilterCorrectPos(&posEstimator.est.pos.V.X, &posEstimator.est.vel.V.X, dt, 0.0f - posEstimator.est.pos.V.X, posControl.navConfig->inav.w_xy_dr_p);
-            inavFilterCorrectPos(&posEstimator.est.pos.V.Y, &posEstimator.est.vel.V.Y, dt, 0.0f - posEstimator.est.pos.V.Y, posControl.navConfig->inav.w_xy_dr_p);
+            //inavFilterCorrectPos(&posEstimator.est.pos.V.X, &posEstimator.est.vel.V.X, dt, 0.0f - posEstimator.est.pos.V.X, posControl.navConfig->inav.w_xy_dr_p);
+            //inavFilterCorrectPos(&posEstimator.est.pos.V.Y, &posEstimator.est.vel.V.Y, dt, 0.0f - posEstimator.est.pos.V.Y, posControl.navConfig->inav.w_xy_dr_p);
 
             inavFilterCorrectVel(&posEstimator.est.vel.V.X, dt, 0.0f - posEstimator.est.vel.V.X, posControl.navConfig->inav.w_xy_dr_v);
             inavFilterCorrectVel(&posEstimator.est.vel.V.Y, dt, 0.0f - posEstimator.est.vel.V.Y, posControl.navConfig->inav.w_xy_dr_v);
