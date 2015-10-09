@@ -140,23 +140,23 @@ typedef struct {
 
 static navigationPosEstimator_s posEstimator;
 
-/* Inertial filter, taken from PX4 implementation by Anton Babushkin <rk3dov@gmail.com> */
-static void inavFilterPredict(float * pos, float * vel, float dt, float acc)
+/* Inertial filter, implementation taken from PX4 implementation by Anton Babushkin <rk3dov@gmail.com> */
+static void inavFilterPredict(int axis, float dt, float acc)
 {
-    *pos += *vel * dt + acc * dt * dt / 2.0f;
-    *vel += acc * dt;
+    posEstimator.est.pos.A[axis] += posEstimator.est.vel.A[axis] * dt + acc * dt * dt / 2.0f;
+    posEstimator.est.vel.A[axis] += acc * dt;
 }
 
-static void inavFilterCorrectPos(float * pos, float * vel, float dt, float e, float w)
+static void inavFilterCorrectPos(int axis, float dt, float e, float w)
 {
     float ewdt = e * w * dt;
-    *pos += ewdt;
-    *vel += w * ewdt;
+    posEstimator.est.pos.A[axis] += ewdt;
+    posEstimator.est.vel.A[axis] += w * ewdt;
 }
 
-static void inavFilterCorrectVel(float * vel, float dt, float e, float w)
+static void inavFilterCorrectVel(int axis, float dt, float e, float w)
 {
-    *vel += e * w * dt;
+    posEstimator.est.vel.A[axis] += e * w * dt;
 }
 
 #if defined(GPS)
@@ -373,7 +373,7 @@ static void updateEstimatedTopic(uint32_t currentTime)
     /* Estimate Z-axis */
     if ((posEstimator.est.epv < posControl.navConfig->inav.max_eph_epv) || useGpsZ || isBaroValid || isSonarValid) {
         /* Predict position/velocity based on acceleration */
-        inavFilterPredict(&posEstimator.est.pos.V.Z, &posEstimator.est.vel.V.Z, dt, imuAverageAcceleration.V.Z);
+        inavFilterPredict(Z, dt, imuAverageAcceleration.V.Z);
 
         /* Compute sonar/baro transition factor */
 #if defined(BARO) && defined(SONAR)
@@ -404,8 +404,8 @@ static void updateEstimatedTopic(uint32_t currentTime)
                                  posControl.navConfig->inav.w_z_baro_v * (1.0f - sonarTransitionFactor);
 
             /* Apply fused velocity and altitude correction */
-            inavFilterCorrectPos(&posEstimator.est.pos.V.Z, &posEstimator.est.vel.V.Z, dt, fusedAlt - posEstimator.est.pos.V.Z, fusedWeightP);
-            inavFilterCorrectVel(&posEstimator.est.vel.V.Z, dt, fusedVel - posEstimator.est.vel.V.Z, fusedWeightV);
+            inavFilterCorrectPos(Z, dt, fusedAlt - posEstimator.est.pos.V.Z, fusedWeightP);
+            inavFilterCorrectVel(Z, dt, fusedVel - posEstimator.est.vel.V.Z, fusedWeightV);
 
             /* Adjust EPV */
             float fusedEPV = posEstimator.sonar.epv * sonarTransitionFactor + posEstimator.baro.epv * (1.0f - sonarTransitionFactor);
@@ -413,24 +413,24 @@ static void updateEstimatedTopic(uint32_t currentTime)
         }
         else if (isSonarValid) {
             /* Apply only sonar correction, no baro */
-            inavFilterCorrectPos(&posEstimator.est.pos.V.Z, &posEstimator.est.vel.V.Z, dt, posEstimator.sonar.alt - posEstimator.est.pos.V.Z, posControl.navConfig->inav.w_z_sonar_p);
-            inavFilterCorrectVel(&posEstimator.est.vel.V.Z, dt, posEstimator.sonar.vel - posEstimator.est.vel.V.Z, posControl.navConfig->inav.w_z_sonar_v);
+            inavFilterCorrectPos(Z, dt, posEstimator.sonar.alt - posEstimator.est.pos.V.Z, posControl.navConfig->inav.w_z_sonar_p);
+            inavFilterCorrectVel(Z, dt, posEstimator.sonar.vel - posEstimator.est.vel.V.Z, posControl.navConfig->inav.w_z_sonar_v);
 
             /* Adjust EPV */
             posEstimator.est.epv = MIN(posEstimator.est.epv, posEstimator.sonar.epv);
         }
         else if (isBaroValid) {
             /* Apply only baro correction, no sonar */
-            inavFilterCorrectPos(&posEstimator.est.pos.V.Z, &posEstimator.est.vel.V.Z, dt, posEstimator.baro.alt - posEstimator.est.pos.V.Z, posControl.navConfig->inav.w_z_baro_p);
-            inavFilterCorrectVel(&posEstimator.est.vel.V.Z, dt, posEstimator.baro.vel - posEstimator.est.vel.V.Z, posControl.navConfig->inav.w_z_baro_v);
+            inavFilterCorrectPos(Z, dt, posEstimator.baro.alt - posEstimator.est.pos.V.Z, posControl.navConfig->inav.w_z_baro_p);
+            inavFilterCorrectVel(Z, dt, posEstimator.baro.vel - posEstimator.est.vel.V.Z, posControl.navConfig->inav.w_z_baro_v);
 
             /* Adjust EPV */
             posEstimator.est.epv = MIN(posEstimator.est.epv, posEstimator.baro.epv);
         }
 #elif defined(BARO)
         if (isBaroValid) {
-            inavFilterCorrectPos(&posEstimator.est.pos.V.Z, &posEstimator.est.vel.V.Z, dt, posEstimator.baro.alt - posEstimator.est.pos.V.Z, posControl.navConfig->inav.w_z_baro_p);
-            inavFilterCorrectVel(&posEstimator.est.vel.V.Z, dt, posEstimator.baro.vel - posEstimator.est.vel.V.Z, posControl.navConfig->inav.w_z_baro_v);
+            inavFilterCorrectPos(Z, dt, posEstimator.baro.alt - posEstimator.est.pos.V.Z, posControl.navConfig->inav.w_z_baro_p);
+            inavFilterCorrectVel(Z, dt, posEstimator.baro.vel - posEstimator.est.vel.V.Z, posControl.navConfig->inav.w_z_baro_v);
 
             /* Adjust EPV */
             posEstimator.est.epv = MIN(posEstimator.est.epv, posEstimator.baro.epv);
@@ -438,8 +438,8 @@ static void updateEstimatedTopic(uint32_t currentTime)
 #elif defined(SONAR)
         if (isSonarValid) {
             /* Apply only sonar correction, no baro */
-            inavFilterCorrectPos(&posEstimator.est.pos.V.Z, &posEstimator.est.vel.V.Z, dt, posEstimator.sonar.alt - posEstimator.est.pos.V.Z, posControl.navConfig->inav.w_z_sonar_p);
-            inavFilterCorrectVel(&posEstimator.est.vel.V.Z, dt, posEstimator.sonar.vel - posEstimator.est.vel.V.Z, posControl.navConfig->inav.w_z_sonar_v);
+            inavFilterCorrectPos(Z, dt, posEstimator.sonar.alt - posEstimator.est.pos.V.Z, posControl.navConfig->inav.w_z_sonar_p);
+            inavFilterCorrectVel(Z, dt, posEstimator.sonar.vel - posEstimator.est.vel.V.Z, posControl.navConfig->inav.w_z_sonar_v);
 
             /* Adjust EPV */
             posEstimator.est.epv = MIN(posEstimator.est.epv, posEstimator.sonar.epv);
@@ -448,30 +448,30 @@ static void updateEstimatedTopic(uint32_t currentTime)
 
         /* Apply GPS correction to altitude */
         if (useGpsZ) {
-            inavFilterCorrectPos(&posEstimator.est.pos.V.Z, &posEstimator.est.vel.V.Z, dt, posEstimator.gps.pos.V.Z - posEstimator.history.pos[gpsHistoryIndex].V.Z, posControl.navConfig->inav.w_z_gps_p);
-            inavFilterCorrectVel(&posEstimator.est.vel.V.Z, dt, posEstimator.gps.vel.V.Z - posEstimator.history.vel[gpsHistoryIndex].V.Z, posControl.navConfig->inav.w_z_gps_v);
+            inavFilterCorrectPos(Z, dt, posEstimator.gps.pos.V.Z - posEstimator.history.pos[gpsHistoryIndex].V.Z, posControl.navConfig->inav.w_z_gps_p);
+            inavFilterCorrectVel(Z, dt, posEstimator.gps.vel.V.Z - posEstimator.history.vel[gpsHistoryIndex].V.Z, posControl.navConfig->inav.w_z_gps_v);
 
             /* Adjust EPV */
             posEstimator.est.epv = MIN(posEstimator.est.epv, posEstimator.gps.epv);
         }
     }
     else {
-        inavFilterCorrectVel(&posEstimator.est.vel.V.Z, dt, 0.0f - posEstimator.est.vel.V.Z, posControl.navConfig->inav.w_z_res_v);
+        inavFilterCorrectVel(Z, dt, 0.0f - posEstimator.est.vel.V.Z, posControl.navConfig->inav.w_z_res_v);
     }
 
     /* Estimate XY-axis */
     if ((posEstimator.est.eph < posControl.navConfig->inav.max_eph_epv) || isGPSValid || useDeadReckoning) {
         /* Predict position */
-        inavFilterPredict(&posEstimator.est.pos.V.X, &posEstimator.est.vel.V.X, dt, imuAverageAcceleration.V.X);
-        inavFilterPredict(&posEstimator.est.pos.V.Y, &posEstimator.est.vel.V.Y, dt, imuAverageAcceleration.V.Y);
+        inavFilterPredict(X, dt, imuAverageAcceleration.V.X);
+        inavFilterPredict(Y, dt, imuAverageAcceleration.V.Y);
 
         /* Correct position */
         if (isGPSValid) {
-            inavFilterCorrectPos(&posEstimator.est.pos.V.X, &posEstimator.est.vel.V.X, dt, posEstimator.gps.pos.V.X - posEstimator.history.pos[gpsHistoryIndex].V.X, posControl.navConfig->inav.w_xy_gps_p);
-            inavFilterCorrectPos(&posEstimator.est.pos.V.Y, &posEstimator.est.vel.V.Y, dt, posEstimator.gps.pos.V.Y - posEstimator.history.pos[gpsHistoryIndex].V.Y, posControl.navConfig->inav.w_xy_gps_p);
+            inavFilterCorrectPos(X, dt, posEstimator.gps.pos.V.X - posEstimator.history.pos[gpsHistoryIndex].V.X, posControl.navConfig->inav.w_xy_gps_p);
+            inavFilterCorrectPos(Y, dt, posEstimator.gps.pos.V.Y - posEstimator.history.pos[gpsHistoryIndex].V.Y, posControl.navConfig->inav.w_xy_gps_p);
 
-            inavFilterCorrectVel(&posEstimator.est.vel.V.X, dt, posEstimator.gps.vel.V.X - posEstimator.history.vel[gpsHistoryIndex].V.X, posControl.navConfig->inav.w_xy_gps_v);
-            inavFilterCorrectVel(&posEstimator.est.vel.V.Y, dt, posEstimator.gps.vel.V.Y - posEstimator.history.vel[gpsHistoryIndex].V.Y, posControl.navConfig->inav.w_xy_gps_v);
+            inavFilterCorrectVel(X, dt, posEstimator.gps.vel.V.X - posEstimator.history.vel[gpsHistoryIndex].V.X, posControl.navConfig->inav.w_xy_gps_v);
+            inavFilterCorrectVel(Y, dt, posEstimator.gps.vel.V.Y - posEstimator.history.vel[gpsHistoryIndex].V.Y, posControl.navConfig->inav.w_xy_gps_v);
 
             /* Adjust EPH */
             posEstimator.est.eph = MIN(posEstimator.est.eph, posEstimator.gps.eph);
@@ -480,11 +480,11 @@ static void updateEstimatedTopic(uint32_t currentTime)
 #if defined(INAV_ENABLE_DEAD_RECKONING)
         /* Use dead reckoning */
         if (useDeadReckoning) {
-            //inavFilterCorrectPos(&posEstimator.est.pos.V.X, &posEstimator.est.vel.V.X, dt, 0.0f - posEstimator.est.pos.V.X, posControl.navConfig->inav.w_xy_dr_p);
-            //inavFilterCorrectPos(&posEstimator.est.pos.V.Y, &posEstimator.est.vel.V.Y, dt, 0.0f - posEstimator.est.pos.V.Y, posControl.navConfig->inav.w_xy_dr_p);
+            //inavFilterCorrectPos(X, dt, 0.0f - posEstimator.est.pos.V.X, posControl.navConfig->inav.w_xy_dr_p);
+            //inavFilterCorrectPos(Y, dt, 0.0f - posEstimator.est.pos.V.Y, posControl.navConfig->inav.w_xy_dr_p);
 
-            inavFilterCorrectVel(&posEstimator.est.vel.V.X, dt, 0.0f - posEstimator.est.vel.V.X, posControl.navConfig->inav.w_xy_dr_v);
-            inavFilterCorrectVel(&posEstimator.est.vel.V.Y, dt, 0.0f - posEstimator.est.vel.V.Y, posControl.navConfig->inav.w_xy_dr_v);
+            inavFilterCorrectVel(X, dt, 0.0f - posEstimator.est.vel.V.X, posControl.navConfig->inav.w_xy_dr_v);
+            inavFilterCorrectVel(Y, dt, 0.0f - posEstimator.est.vel.V.Y, posControl.navConfig->inav.w_xy_dr_v);
 
             /* Adjust EPH to just below max_epe */
             posEstimator.est.eph = posControl.navConfig->inav.max_eph_epv / (1.0f + dt);
@@ -492,8 +492,8 @@ static void updateEstimatedTopic(uint32_t currentTime)
 #endif
     }
     else {
-        inavFilterCorrectVel(&posEstimator.est.vel.V.X, dt, 0.0f - posEstimator.est.vel.V.X, posControl.navConfig->inav.w_xy_res_v);
-        inavFilterCorrectVel(&posEstimator.est.vel.V.Y, dt, 0.0f - posEstimator.est.vel.V.Y, posControl.navConfig->inav.w_xy_res_v);
+        inavFilterCorrectVel(X, dt, 0.0f - posEstimator.est.vel.V.X, posControl.navConfig->inav.w_xy_res_v);
+        inavFilterCorrectVel(Y, dt, 0.0f - posEstimator.est.vel.V.Y, posControl.navConfig->inav.w_xy_res_v);
     }
 }
 
