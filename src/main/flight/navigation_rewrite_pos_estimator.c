@@ -74,8 +74,6 @@
  * Based on INAV position estimator for PX4 by Anton Babushkin <anton.babushkin@me.com> 
  * @author Konstantin Sharlaimov <konstantin.sharlaimov@gmail.com>
  */
-#define INAV_ENABLE_DEAD_RECKONING
-
 #define INAV_GPS_EPV        500.0f  // 5m GPS VDOP
 #define INAV_GPS_EPH        200.0f  // 2m GPS HDOP  (gives about 1.6s of dead-reckoning if GPS is temporary lost)
 
@@ -88,6 +86,8 @@
 #define INAV_SONAR_TIMEOUT_MS               200     // Sonar timeout
 
 #define INAV_HISTORY_BUF_SIZE               (INAV_POSITION_PUBLISH_RATE_HZ / 2)     // Enough to hold 0.5 sec historical data
+
+extern float magneticDeclination;
 
 typedef struct {
     uint32_t    lastUpdateTime; // Last update time (us)
@@ -193,6 +193,10 @@ void onNewGPSData(int32_t newLat, int32_t newLon, int32_t newAlt)
     gpsLocation_t newLLH;
     uint32_t currentTime = micros();
 
+    newLLH.lat = newLat;
+    newLLH.lon = newLon;
+    newLLH.alt = newAlt;
+
     if (sensors(SENSOR_GPS)) {
         if (!(STATE(GPS_FIX) && GPS_numSat >= 5)) {
             isFirstGPSUpdate = true;
@@ -203,14 +207,20 @@ void onNewGPSData(int32_t newLat, int32_t newLon, int32_t newAlt)
             isFirstGPSUpdate = true;
         }
 
+#if defined(INAV_ENABLE_AUTO_MAG_DECLINATION)
+        /* Automatic magnetic declination calculation - do this once */
+        static bool magDeclinationSet = false;
+        if (posControl.navConfig->inav.automatic_mag_declination && !magDeclinationSet) {
+            magneticDeclination = geoCalculateMagDeclination(&newLLH) * 10.0f; // heading is in 0.1deg units
+            magDeclinationSet = true;
+        }
+#endif
+
         /* Process position update if GPS origin is already set, or precision is good enough */
         // FIXME: use HDOP here
         if ((posControl.gpsOrigin.valid) || (GPS_numSat >= 6)) {
             /* Convert LLH position to local coordinates */
-            newLLH.lat = newLat;
-            newLLH.lon = newLon;
-            newLLH.alt = newAlt;
-            gpsConvertGeodeticToLocal(&posControl.gpsOrigin, &newLLH, &posEstimator.gps.pos);
+            geoConvertGeodeticToLocal(&posControl.gpsOrigin, &newLLH, &posEstimator.gps.pos);
 
             /* If not the first update - calculate velocities */
             if (!isFirstGPSUpdate) {
@@ -357,9 +367,7 @@ static void updateEstimatedTopic(uint32_t currentTime)
                         sensors(SENSOR_GPS) && ((currentTime - posEstimator.gps.lastUpdateTime) <= MS2US(INAV_GPS_TIMEOUT_MS));
     bool isBaroValid = sensors(SENSOR_BARO) && ((currentTime - posEstimator.baro.lastUpdateTime) <= MS2US(INAV_BARO_TIMEOUT_MS));
     bool isSonarValid = sensors(SENSOR_SONAR) && ((currentTime - posEstimator.sonar.lastUpdateTime) <= MS2US(INAV_SONAR_TIMEOUT_MS));
-#if defined(INAV_ENABLE_DEAD_RECKONING)
     bool useDeadReckoning = posControl.navConfig->inav.enable_dead_reckoning && (!isGPSValid);
-#endif
 
     /* Apply GPS altitude corrections only on fixed wing aircrafts */
     bool useGpsZ = STATE(FIXED_WING) && isGPSValid;
@@ -477,7 +485,6 @@ static void updateEstimatedTopic(uint32_t currentTime)
             posEstimator.est.eph = MIN(posEstimator.est.eph, posEstimator.gps.eph);
         }
 
-#if defined(INAV_ENABLE_DEAD_RECKONING)
         /* Use dead reckoning */
         if (useDeadReckoning) {
             //inavFilterCorrectPos(X, dt, 0.0f - posEstimator.est.pos.V.X, posControl.navConfig->inav.w_xy_dr_p);
@@ -489,7 +496,6 @@ static void updateEstimatedTopic(uint32_t currentTime)
             /* Adjust EPH to just below max_epe */
             posEstimator.est.eph = posControl.navConfig->inav.max_eph_epv / (1.0f + dt);
         }
-#endif
     }
     else {
         inavFilterCorrectVel(X, dt, 0.0f - posEstimator.est.vel.V.X, posControl.navConfig->inav.w_xy_res_v);

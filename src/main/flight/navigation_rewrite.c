@@ -293,46 +293,6 @@ bool isWaypointReached(navWaypointPosition_t *waypoint)
 }
 
 /*-----------------------------------------------------------
- * Coordinate conversions
- *-----------------------------------------------------------*/
-void gpsConvertGeodeticToLocal(gpsOrigin_s * origin, gpsLocation_t * llh, t_fp_vector * pos)
-{
-    if (!origin->valid) {
-        origin->valid = true;
-        origin->lat = llh->lat;
-        origin->lon = llh->lon;
-        origin->alt = llh->alt;
-        origin->scale = constrainf(cos_approx((ABS(origin->lat) / 10000000.0f) * 0.0174532925f), 0.01f, 1.0f);
-    }
-
-    pos->V.X = (llh->lat - origin->lat) * DISTANCE_BETWEEN_TWO_LONGITUDE_POINTS_AT_EQUATOR;
-    pos->V.Y = (llh->lon - origin->lon) * (DISTANCE_BETWEEN_TWO_LONGITUDE_POINTS_AT_EQUATOR * origin->scale);
-    pos->V.Z = (llh->alt - origin->alt);
-}
-
-void gpsConvertLocalToGeodetic(gpsOrigin_s * origin, t_fp_vector * pos, gpsLocation_t * llh)
-{
-    float scaleLonDown;
-
-    if (origin->valid) {
-        llh->lat = origin->lat;
-        llh->lon = origin->lon;
-        llh->alt = origin->alt;
-        scaleLonDown = origin->scale;
-    }
-    else {
-        llh->lat = 0;
-        llh->lon = 0;
-        llh->alt = 0;
-        scaleLonDown = 1.0f;
-    }
-
-    llh->lat += lrintf(pos->V.X / DISTANCE_BETWEEN_TWO_LONGITUDE_POINTS_AT_EQUATOR);
-    llh->lon += lrintf(pos->V.Y / (DISTANCE_BETWEEN_TWO_LONGITUDE_POINTS_AT_EQUATOR * scaleLonDown));
-    llh->alt += lrintf(pos->V.Z);
-}
-
-/*-----------------------------------------------------------
  * Compatibility for home position
  *-----------------------------------------------------------*/
 gpsLocation_t GPS_home;
@@ -341,7 +301,7 @@ int16_t       GPS_directionToHome;       // direction to home point in degrees
 
 static void updateHomePositionCompatibility(void)
 {
-    gpsConvertLocalToGeodetic(&posControl.gpsOrigin, &posControl.homePosition.pos, &GPS_home);
+    geoConvertLocalToGeodetic(&posControl.gpsOrigin, &posControl.homePosition.pos, &GPS_home);
     GPS_distanceToHome = posControl.homeDistance / 100;
     GPS_directionToHome = posControl.homeDirection / 100;
 }
@@ -549,12 +509,12 @@ void getWaypoint(uint8_t wpNumber, int32_t * wpLat, int32_t * wpLon, int32_t * w
     }
     // WP #255 - special waypoint - directly get actualPosition
     else if (wpNumber == 255) {
-        gpsConvertLocalToGeodetic(&posControl.gpsOrigin, &posControl.actualState.pos, &wpLLH);
+        geoConvertLocalToGeodetic(&posControl.gpsOrigin, &posControl.actualState.pos, &wpLLH);
     }
     // WP #1 - #15 - common waypoints - pre-programmed mission
     else if ((wpNumber >= 1) && (wpNumber <= NAV_MAX_WAYPOINTS)) {
         if (wpNumber <= posControl.waypointCount) {
-            gpsConvertLocalToGeodetic(&posControl.gpsOrigin, &posControl.waypointList[wpNumber - 1].pos, &wpLLH);
+            geoConvertLocalToGeodetic(&posControl.gpsOrigin, &posControl.waypointList[wpNumber - 1].pos, &wpLLH);
         }
     }
 
@@ -576,7 +536,7 @@ void setWaypoint(uint8_t wpNumber, int32_t wpLat, int32_t wpLon, int32_t wpAlt)
     wpLLH.lat = wpLat;
     wpLLH.lon = wpLon;
     wpLLH.alt = wpAlt;
-    gpsConvertGeodeticToLocal(&posControl.gpsOrigin, &wpLLH, &wpPos.pos);
+    geoConvertGeodeticToLocal(&posControl.gpsOrigin, &wpLLH, &wpPos.pos);
     wpPos.yaw = 0;  // FIXME
 
     // WP #0 - special waypoint - HOME
