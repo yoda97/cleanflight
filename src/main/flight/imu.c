@@ -109,9 +109,9 @@ static void imuTransformVectorBodyToEarth(t_fp_vector * v)
     float x,y,z;
 
     /* From body frame to earth frame */
-    x = (1.0f - 2.0f * q2q2 - 2.0f * q3q3) * v->V.X + 2.0f * (q1*q2 + -q0*q3) * v->V.Y + 2.0f * (q1*q3 - -q0*q2) * v->V.Z;
-    y = 2.0f * (q1*q2 - -q0*q3) * v->V.X + (1.0f - 2.0f * q1q1 - 2.0f * q3q3) * v->V.Y + 2.0f * (q2*q3 + -q0*q1) * v->V.Z;
-    z = 2.0f * (q1*q3 + -q0*q2) * v->V.X + 2.0f * (q2*q3 - -q0*q1) * v->V.Y + (1.0f - 2.0f * q1q1 - 2.0f * q2q2) * v->V.Z;
+    x = (1.0f - 2.0f * q2q2 - 2.0f * q3q3) * v->V.X + 2.0f * (q1q2 + -q0q3) * v->V.Y + 2.0f * (q1q3 - -q0q2) * v->V.Z;
+    y = 2.0f * (q1q2 - -q0q3) * v->V.X + (1.0f - 2.0f * q1q1 - 2.0f * q3q3) * v->V.Y + 2.0f * (q2q3 + -q0q1) * v->V.Z;
+    z = 2.0f * (q1q3 + -q0q2) * v->V.X + 2.0f * (q2q3 - -q0q1) * v->V.Y + (1.0f - 2.0f * q1q1 - 2.0f * q2q2) * v->V.Z;
 
     v->V.X = x;
     v->V.Y = y;
@@ -145,13 +145,14 @@ static void imuCalculateAccelerationNorthEastUp(uint32_t deltaT)
     // FIXME: accel_ned is actually not NED, but NWU (rotated 180deg around X axis). We need NEU coordinates, so we simply reverse Y axis
     accel_ned.V.Y = -accel_ned.V.Y;
 
-    // Calculate acceleration and velocity based on IMU data
+    // Calculate acceleration in earth frame
     int axis;
     for (axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
         // Convert to cm/s^2
         float accValueCMSS = accel_ned.A[axis] * (100.0f * 9.80665f / acc_1G);
 
         // Apply LPF to acceleration: y[i] = y[i-1] + alpha * (x[i] - y[i-1])
+        // TODO: Verify if LPF is needed here
         imuAverageAcceleration.A[axis] += (accDt / ((0.5f / (M_PIf * ACCELERATION_LPF_HZ)) + accDt)) * (accValueCMSS - imuAverageAcceleration.A[axis]);
     }
 }
@@ -255,9 +256,9 @@ static void imuMahonyAHRSupdate(float gx, float gy, float gz, float ax, float ay
 static void imuUpdateEulerAngles(void)
 {
     /* Compute pitch/roll angles */
-    attitude.values.roll = lrintf(atan2_approx(2.0f * (q2*q3 + q1*q0), 1.0f - 2.0f * (q1q1 + q2q2)) * (1800.0f / M_PIf));
-    attitude.values.pitch = lrintf(((0.5f * M_PIf) - acos_approx(2.0f * (q2*q0 - q1*q3))) * (1800.0f / M_PIf));
-    attitude.values.yaw = lrintf((-atan2_approx(2.0f * (q1*q2 + q3*q0), 1.0f - 2.0f * (q2q2 + q3q3)) * (1800.0f / M_PIf) + magneticDeclination));
+    attitude.values.roll = lrintf(atan2_approx(2.0f * (q2q3 + q0q1), 1.0f - 2.0f * (q1q1 + q2q2)) * (1800.0f / M_PIf));
+    attitude.values.pitch = lrintf(((0.5f * M_PIf) - acos_approx(2.0f * (q0q2 - q1q3))) * (1800.0f / M_PIf));
+    attitude.values.yaw = lrintf((-atan2_approx(2.0f * (q1q2 + q0q3), 1.0f - 2.0f * (q2q2 + q3q3)) * (1800.0f / M_PIf) + magneticDeclination));
 
     if (attitude.values.yaw < 0)
         attitude.values.yaw += 3600;
@@ -267,7 +268,7 @@ static void imuUpdateEulerAngles(void)
     debug[2] = attitude.values.yaw;
 
     /* tilt angle cosine is directly computable from orientation quaternion */
-    cosTiltAngleZ = 1.0f - 2.0f * q1*q1 - 2.0f * q2*q2;
+    cosTiltAngleZ = 1.0f - 2.0f * q1q1 - 2.0f * q2q2;
 
     /* Update small angle state */
     if (cosTiltAngleZ > smallAngleCosZ) {
@@ -306,8 +307,8 @@ static void imuCalculateEstimatedAttitude(void)
     accMagnitude = accMagnitude * 100 / ((int32_t)acc_1G * acc_1G);
 
     // Calculate accelerometer magnitude and ignore it if accelerating/decelerating too much
-    bool useAcc = (72 < (uint16_t)accMagnitude && (uint16_t)accMagnitude < 133);
-    bool useMag = sensors(SENSOR_MAG);
+    bool useAcc = (72 < (uint16_t)accMagnitude) && ((uint16_t)accMagnitude < 133);
+    bool useMag = sensors(SENSOR_MAG) && (magADC[X] != 0) && (magADC[Y] != 0) && (magADC[Z] != 0);
 
     imuMahonyAHRSupdate(gx, gy, gz,
                         accSmooth[X], accSmooth[Y], accSmooth[Z],
