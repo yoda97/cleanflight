@@ -560,6 +560,26 @@ void initializePositionEstimator(void)
     memset(&posEstimator.history.vel[0], 0, sizeof(posEstimator.history.vel));
 }
 
+/*
+static void fakeGPS(uint32_t currentTime)
+{
+    static navigationTimer_t fakeGpsTimer;
+
+    if (currentTime < 5000000)
+        return;
+
+    persistentFlagSet(FLAG_MAG_CALIBRATION_DONE);
+    sensorsSet(SENSOR_GPS);
+    ENABLE_STATE(GPS_FIX);
+    GPS_numSat = 6;
+
+    if (updateTimer(&fakeGpsTimer, HZ2US(10), currentTime)) {
+        // sensorsSet(SENSOR_MAG);
+        onNewGPSData(505498090, 1370165690, 0);
+    }
+}
+*/
+
 /**
  * Update estimator
  *  Update rate: loop rate (>100Hz)
@@ -574,6 +594,8 @@ void updatePositionEstimator(void)
     }
 
     uint32_t currentTime = micros();
+
+    //fakeGPS(currentTime);
 
     /* Periodic sensor updates */
 #if defined(BARO)

@@ -311,19 +311,17 @@ static void updateHomePositionCompatibility(void)
  *-----------------------------------------------------------*/
 void setHomePosition(t_fp_vector * pos, int32_t yaw)
 {
-    if (STATE(GPS_FIX) && GPS_numSat >= 5) {
-        posControl.homePosition.pos = *pos;
-        posControl.homePosition.yaw = yaw;
-        posControl.homeDistance = 0;
-        posControl.homeDirection = 0;
+    posControl.homePosition.pos = *pos;
+    posControl.homePosition.yaw = yaw;
+    posControl.homeDistance = 0;
+    posControl.homeDirection = 0;
 
-        // Update target RTH altitude as a waypoint above home
-        posControl.homeWaypointAbove = posControl.homePosition;
-        setupAutonomousControllerRTH();
+    // Update target RTH altitude as a waypoint above home
+    posControl.homeWaypointAbove = posControl.homePosition;
+    setupAutonomousControllerRTH();
 
-        updateHomePositionCompatibility();
-        ENABLE_STATE(GPS_FIX_HOME);
-    }
+    updateHomePositionCompatibility();
+    ENABLE_STATE(GPS_FIX_HOME);
 }
 
 /*-----------------------------------------------------------
@@ -332,15 +330,21 @@ void setHomePosition(t_fp_vector * pos, int32_t yaw)
 void updateHomePosition(void)
 {
     // Disarmed and have a valid position, constantly update home
-    if (!ARMING_FLAG(ARMED) && posControl.flags.hasValidPositionSensor) {
-        setHomePosition(&posControl.actualState.pos, posControl.actualState.yaw);
+    if (!ARMING_FLAG(ARMED)) {
+        if (posControl.flags.hasValidPositionSensor) {
+            setHomePosition(&posControl.actualState.pos, posControl.actualState.yaw);
+        }
+        else {
+            DISABLE_STATE(GPS_FIX_HOME);
+        }
     }
-
-    // Update distance and direction to home
-    if (STATE(GPS_FIX_HOME)) {
-        posControl.homeDistance = calculateDistanceToDestination(&posControl.homePosition.pos);
-        posControl.homeDirection = calculateBearingToDestination(&posControl.homePosition.pos);
-        updateHomePositionCompatibility();
+    else {
+        // Update distance and direction to home if armed (home is not updated when armed)
+        if (STATE(GPS_FIX_HOME)) {
+            posControl.homeDistance = calculateDistanceToDestination(&posControl.homePosition.pos);
+            posControl.homeDirection = calculateBearingToDestination(&posControl.homePosition.pos);
+            updateHomePositionCompatibility();
+        }
     }
 }
 
@@ -878,6 +882,9 @@ void updateWaypointsAndNavigationMode(void)
                 break;
         }
     }
+
+    // Initiate home position update
+    updateHomePosition();
 
     // Map navMode back to enabled flight modes
     swithNavigationFlightModes(posControl.mode);
