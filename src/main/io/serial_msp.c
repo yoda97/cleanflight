@@ -311,7 +311,7 @@ static const char * const boardIdentifier = TARGET_BOARD_IDENTIFIER;
 #define INBUF_SIZE 64
 
 typedef struct box_e {
-    const uint8_t boxId;         // see boxId_e
+    const uint8_t boxId;            // see boxId_e
     const char *boxName;            // GUI-readable box name
     const uint8_t permanentId;      //
 } box_t;
@@ -321,11 +321,14 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXARM, "ARM;", 0 },
     { BOXANGLE, "ANGLE;", 1 },
     { BOXHORIZON, "HORIZON;", 2 },
+    { BOXNAVALTHOLD, "NAV ALTHOLD;", 3 },   // old BARO
     { BOXMAG, "MAG;", 5 },
     { BOXHEADFREE, "HEADFREE;", 6 },
     { BOXHEADADJ, "HEADADJ;", 7 },
     { BOXCAMSTAB, "CAMSTAB;", 8 },
     { BOXCAMTRIG, "CAMTRIG;", 9 },
+    { BOXNAVRTH, "NAV RTH;", 10 },         // old GPS HOME
+    { BOXNAVPOSHOLD, "NAV POSHOLD;", 11 },     // old GPS HOLD
     { BOXPASSTHRU, "PASSTHRU;", 12 },
     { BOXBEEPERON, "BEEPER;", 13 },
     { BOXLEDMAX, "LEDMAX;", 14 },
@@ -341,10 +344,7 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXSERVO3, "SERVO3;", 25 },
     { BOXBLACKBOX, "BLACKBOX;", 26 },
     { BOXFAILSAFE, "FAILSAFE;", 27 },
-    { BOXNAVALTHOLD, "NAV ALTHOLD;", 28 },
-    { BOXNAVPOSHOLD, "NAV POSHOLD;", 29 },
-    { BOXNAVRTH, "NAV RTH;", 30 },
-    { BOXNAVWP, "NAV WP;", 31 },
+    { BOXNAVWP, "NAV WP;", 28 },
     { CHECKBOX_ITEM_COUNT, NULL, 0xFF }
 };
 
