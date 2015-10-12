@@ -25,49 +25,27 @@
 #include "debug.h"
 
 #include "common/axis.h"
-#include "common/color.h"
 #include "common/maths.h"
 
-#include "drivers/sensor.h"
 #include "drivers/system.h"
-#include "drivers/gpio.h"
-#include "drivers/timer.h"
-#include "drivers/serial.h"
+#include "drivers/sensor.h"
 #include "drivers/accgyro.h"
-#include "drivers/compass.h"
-#include "drivers/pwm_rx.h"
-
-#include "rx/rx.h"
 
 #include "sensors/sensors.h"
 #include "sensors/sonar.h"
 #include "sensors/barometer.h"
-#include "sensors/compass.h"
 #include "sensors/acceleration.h"
-#include "sensors/gyro.h"
-#include "sensors/battery.h"
 #include "sensors/boardalignment.h"
 
-#include "io/serial.h"
 #include "io/gps.h"
-#include "io/gimbal.h"
-#include "io/ledstrip.h"
-
-#include "telemetry/telemetry.h"
-#include "blackbox/blackbox.h"
 
 #include "flight/pid.h"
 #include "flight/imu.h"
-#include "flight/mixer.h"
-#include "flight/failsafe.h"
-#include "flight/gps_conversion.h"
 #include "flight/navigation_rewrite.h"
 #include "flight/navigation_rewrite_private.h"
 
 #include "config/runtime_config.h"
 #include "config/config.h"
-#include "config/config_profile.h"
-#include "config/config_master.h"
 
 /**
  * Model-identification based position estimator
@@ -77,6 +55,8 @@
 #define INAV_GPS_EPV        500.0f  // 5m GPS VDOP
 #define INAV_GPS_EPH        200.0f  // 2m GPS HDOP  (gives about 1.6s of dead-reckoning if GPS is temporary lost)
 
+#define INAV_MIN_GPS_SAT_COUNT              5       // Minimum satellite count
+
 #define INAV_POSITION_PUBLISH_RATE_HZ       50      // Publish position updates at this rate
 #define INAV_BARO_UPDATE_RATE               20
 #define INAV_SONAR_UPDATE_RATE              20
@@ -84,6 +64,8 @@
 #define INAV_GPS_TIMEOUT_MS                 1500    // GPS timeout
 #define INAV_BARO_TIMEOUT_MS                200     // Baro timeout
 #define INAV_SONAR_TIMEOUT_MS               200     // Sonar timeout
+
+#define INAV_BARO_CLIMB_RATE_FILTER_SIZE    7
 
 #define INAV_HISTORY_BUF_SIZE               (INAV_POSITION_PUBLISH_RATE_HZ / 2)     // Enough to hold 0.5 sec historical data
 
@@ -198,7 +180,7 @@ void onNewGPSData(int32_t newLat, int32_t newLon, int32_t newAlt)
     newLLH.alt = newAlt;
 
     if (sensors(SENSOR_GPS)) {
-        if (!(STATE(GPS_FIX) && GPS_numSat >= 5)) {
+        if (!(STATE(GPS_FIX) && GPS_numSat >= INAV_MIN_GPS_SAT_COUNT)) {
             isFirstGPSUpdate = true;
             return;
         }
@@ -218,7 +200,7 @@ void onNewGPSData(int32_t newLat, int32_t newLon, int32_t newAlt)
 
         /* Process position update if GPS origin is already set, or precision is good enough */
         // FIXME: use HDOP here
-        if ((posControl.gpsOrigin.valid) || (GPS_numSat >= 6)) {
+        if ((posControl.gpsOrigin.valid) || (GPS_numSat >= INAV_MIN_GPS_SAT_COUNT)) {
             /* Convert LLH position to local coordinates */
             geoConvertGeodeticToLocal(&posControl.gpsOrigin, &newLLH, &posEstimator.gps.pos);
 
@@ -264,13 +246,13 @@ void onNewGPSData(int32_t newLat, int32_t newLon, int32_t newAlt)
 static void updateBaroTopic(uint32_t currentTime)
 {
     static navigationTimer_t baroUpdateTimer;
-    static filterWithBufferSample_t baroClimbRateFilterBuffer[NAV_BARO_CLIMB_RATE_FILTER_SIZE];
+    static filterWithBufferSample_t baroClimbRateFilterBuffer[INAV_BARO_CLIMB_RATE_FILTER_SIZE];
     static filterWithBufferState_t baroClimbRateFilter;
     static bool climbRateFiltersInitialized = false;
 
     if (updateTimer(&baroUpdateTimer, HZ2US(INAV_BARO_UPDATE_RATE), currentTime)) {
         if (!climbRateFiltersInitialized) {
-            filterWithBufferInit(&baroClimbRateFilter, &baroClimbRateFilterBuffer[0], NAV_BARO_CLIMB_RATE_FILTER_SIZE);
+            filterWithBufferInit(&baroClimbRateFilter, &baroClimbRateFilterBuffer[0], INAV_BARO_CLIMB_RATE_FILTER_SIZE);
             climbRateFiltersInitialized = true;
         }
 

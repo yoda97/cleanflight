@@ -24,49 +24,23 @@
 #include "debug.h"
 
 #include "common/axis.h"
-#include "common/color.h"
 #include "common/maths.h"
 
-#include "drivers/sensor.h"
 #include "drivers/system.h"
-#include "drivers/gpio.h"
-#include "drivers/timer.h"
-#include "drivers/serial.h"
+#include "drivers/sensor.h"
 #include "drivers/accgyro.h"
-#include "drivers/compass.h"
-#include "drivers/pwm_rx.h"
-
-#include "rx/rx.h"
 
 #include "sensors/sensors.h"
-#include "sensors/sonar.h"
-#include "sensors/barometer.h"
-#include "sensors/compass.h"
 #include "sensors/acceleration.h"
-#include "sensors/gyro.h"
-#include "sensors/battery.h"
 #include "sensors/boardalignment.h"
-
-#include "io/serial.h"
-#include "io/gps.h"
-#include "io/gimbal.h"
-#include "io/ledstrip.h"
-
-#include "telemetry/telemetry.h"
-#include "blackbox/blackbox.h"
 
 #include "flight/pid.h"
 #include "flight/imu.h"
-#include "flight/mixer.h"
-#include "flight/failsafe.h"
-#include "flight/gps_conversion.h"
 #include "flight/navigation_rewrite.h"
 #include "flight/navigation_rewrite_private.h"
 
 #include "config/runtime_config.h"
 #include "config/config.h"
-#include "config/config_profile.h"
-#include "config/config_master.h"
 
 #if defined(NAV)
 

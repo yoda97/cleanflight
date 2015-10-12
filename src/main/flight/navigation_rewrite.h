@@ -17,13 +17,7 @@
 
 #pragma once
 
-#include "common/axis.h"
 #include "common/maths.h"
-
-#include "flight/pid.h"
-
-#include "sensors/barometer.h"
-
 #include "io/rc_controls.h"
 #include "io/escservo.h"
 
@@ -145,9 +139,14 @@ typedef struct {
 void navigationUsePIDs(pidProfile_t *pidProfile);
 void navigationUseConfig(navConfig_t *navConfigToUse);
 void navigationUseRcControlsConfig(rcControlsConfig_t *initialRcControlsConfig);
+void navigationUseRxConfig(rxConfig_t * initialRxConfig);
+void navigationUseEscAndServoConfig(escAndServoConfig_t * initialEscAndServoConfig);
 void navigationInit(navConfig_t *initialnavConfig,
                     pidProfile_t *initialPidProfile,
-                    rcControlsConfig_t *initialRcControlsConfig);
+                    rcControlsConfig_t *initialRcControlsConfig,
+                    rxConfig_t * initialRxConfig,
+                    escAndServoConfig_t * initialEscAndServoConfig,
+                    uint8_t initialYawControlDirection);
 
 void onNewGPSData(int32_t lat, int32_t lon, int32_t alt);
 
