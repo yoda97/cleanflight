@@ -70,12 +70,32 @@
 
 #if defined(NAV)
 
+#define HOVER_ACCZ_THRESHOLD    5.0f    // cm/s/s
+#define HOVER_THR_FILTER        0.025f
+
 /*-----------------------------------------------------------
  * Altitude controller for multicopter aircraft
  *-----------------------------------------------------------*/
 static int16_t altholdInitialThrottle;      // Throttle input when althold was activated
+static float hoverThrottle = 0;
 static int16_t rcCommandAdjustedThrottle;
 static bool accelLimitingXY = false;        // true if acceleration limiting active
+
+static void updateHoverThrottle(void)
+{
+    if (hoverThrottle <= masterConfig.escAndServoConfig.minthrottle) {
+        // FIXME: make this configurable
+        hoverThrottle = masterConfig.rxConfig.midrc;
+    }
+    else {
+        if (posControl.flags.hasValidAltitudeSensor && imuAverageAcceleration.V.Z <= HOVER_ACCZ_THRESHOLD) {
+            hoverThrottle += (rcCommand[THROTTLE] - hoverThrottle) * HOVER_THR_FILTER;
+        }
+    }
+
+    // FIXME: Make us of this after verification that it works
+    NAV_BLACKBOX_DEBUG(0, hoverThrottle);
+}
 
 static void updateAltitudeTargetFromRCInput_MC(uint32_t deltaMicros)
 {
@@ -367,13 +387,13 @@ static void updatePositionLeanAngleFromRCInput_MC(void)
         return;
     }
 
-    int16_t rcPitchAdjustment = applyDeadband(rcCommand[PITCH], posControl.navConfig->pos_hold_deadband);
     int16_t rcRollAdjustment = applyDeadband(rcCommand[ROLL], posControl.navConfig->pos_hold_deadband);
+    int16_t rcPitchAdjustment = applyDeadband(rcCommand[PITCH], posControl.navConfig->pos_hold_deadband);
 
     if (rcPitchAdjustment || rcRollAdjustment) {
         // Direct attitude control
-        posControl.rcAdjustment[PITCH] = rcPitchAdjustment;
-        posControl.rcAdjustment[ROLL] = rcRollAdjustment;
+        posControl.rcAdjustment[ROLL] = rcCommand[ROLL];
+        posControl.rcAdjustment[PITCH] = rcCommand[PITCH];
 
         // If we are in position hold mode, so adjust poshold position
         if (navShouldApplyPosHold()) {
@@ -592,6 +612,15 @@ void applyMulticopterEmergencyLandingController(void)
     rcCommand[PITCH] = 0;
     rcCommand[YAW] = 0;
     rcCommand[THROTTLE] = 1300; // FIXME
+}
+
+/*-----------------------------------------------------------
+ * Multicopter-specific automatic parameter update 
+ *-----------------------------------------------------------*/
+void updateMulticopterSpecificData(uint32_t currentTime)
+{
+    UNUSED(currentTime);
+    updateHoverThrottle();
 }
 
 #endif  // NAV

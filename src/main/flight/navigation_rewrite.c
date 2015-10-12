@@ -481,6 +481,16 @@ static void applyPositionController(uint32_t currentTime)
     }
 }
 
+static void updatePlatformSpecificData(uint32_t currentTime)
+{
+    if (STATE(FIXED_WING)) {
+        updateFixedWingSpecificData(currentTime);
+    }
+    else {
+        updateMulticopterSpecificData(currentTime);
+    }
+}
+
 /*-----------------------------------------------------------
  * WP controller
  *-----------------------------------------------------------*/
@@ -660,6 +670,9 @@ void applyWaypointNavigationAndAltitudeHold(void)
             applyHeadingController();
         }
     }
+
+    // Update some platform-specific parameters, unknown to position estimator, i.e. hover throttle
+    updatePlatformSpecificData(currentTime);
 
 #if defined(NAV_BLACKBOX)
     navFlags = 0;

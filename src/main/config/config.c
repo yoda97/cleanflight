@@ -249,7 +249,7 @@ void resetNavConfig(navConfig_t * navConfig)
     navConfig->waypoint_radius = 300;
     navConfig->pterm_cut_hz = 20;
     navConfig->dterm_cut_hz = 15;
-    navConfig->max_speed = 500;
+    navConfig->max_speed = 250;
     navConfig->max_manual_speed = 500;
     navConfig->max_manual_climb_rate = 200;
     navConfig->min_rth_distance = 500;   // If closer than 5m - land immediately
