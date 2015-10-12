@@ -335,9 +335,6 @@ void resetMulticopterPositionController(void)
 
 static void updatePositionTargetFromRCInput_MC(void)
 {
-    if (posControl.navConfig->flags.user_control_mode != NAV_GPS_CRUISE)
-        return;
-
     // In some cases pilot has no control over flight direction
     if (!navCanAdjustHorizontalVelocityAndAttitudeFromRCInput()) {
         posControl.flags.isAdjustingPosition = false;
@@ -376,11 +373,8 @@ static void updatePositionTargetFromRCInput_MC(void)
     }
 }
 
-static void updatePositionLeanAngleFromRCInput_MC(void)
+static void updatePositionLeanAngleFromRCInput_MC()
 {
-    if (posControl.navConfig->flags.user_control_mode != NAV_GPS_ATTI)
-        return;
-
     // In some cases pilot has no control over flight direction
     if (!navCanAdjustHorizontalVelocityAndAttitudeFromRCInput()) {
         posControl.flags.isAdjustingPosition = false;
@@ -511,6 +505,7 @@ void applyMulticopterPositionController(uint32_t currentTime)
     static navigationTimer_t targetPositionUpdateTimer; // Occurs @ POSITION_TARGET_UPDATE_RATE_HZ
     static uint32_t previousTimePositionUpdate;         // Occurs @ GPS update rate
     static uint32_t previousTimeUpdate;                 // Occurs @ looptime rate
+    bool forceGPSAttiMode = false;
 
     uint32_t deltaMicros = currentTime - previousTimeUpdate;
     previousTimeUpdate = currentTime;
@@ -529,7 +524,9 @@ void applyMulticopterPositionController(uint32_t currentTime)
     if (posControl.flags.hasValidPositionSensor) {
         // Update position target from RC input
         if (updateTimer(&targetPositionUpdateTimer, HZ2US(POSITION_TARGET_UPDATE_RATE_HZ), currentTime)) {
-            updatePositionTargetFromRCInput_MC();
+            if (posControl.navConfig->flags.user_control_mode == NAV_GPS_CRUISE && !forceGPSAttiMode) {
+                updatePositionTargetFromRCInput_MC();
+            }
         }
 
         // If we have new position - update velocity and acceleration controllers
@@ -559,20 +556,32 @@ void applyMulticopterPositionController(uint32_t currentTime)
             // Indicate that information is no longer usable
             posControl.flags.horizontalPositionNewData = 0;
         }
+    }
+    else {
+        /* No position data, disable automatic adjustment */
+        posControl.rcAdjustment[PITCH] = 0;
+        posControl.rcAdjustment[ROLL] = 0;
 
+        /* Force GPS_ATTI mode */
+        forceGPSAttiMode = true;
+    }
+
+    /* Process pilot input (only GPS_ATTI mode) */
+    if (posControl.navConfig->flags.user_control_mode == NAV_GPS_ATTI || forceGPSAttiMode) {
         updatePositionLeanAngleFromRCInput_MC();
+    }
 
-        // Convert target angle (rcAdjustment) to rcCommand, account for the way PID controllers treat the value
-        if (posControl.pidProfile->pidController == PID_CONTROLLER_LUX_FLOAT) {
-            // LuxFloat is the only PID controller that uses raw rcCommand as target angle
-            rcCommand[PITCH] = posControl.rcAdjustment[PITCH];
-            rcCommand[ROLL] = posControl.rcAdjustment[ROLL];
-        }
-        else {
-            // Most PID controllers use 2 * rcCommand as target angle for ANGLE mode
-            rcCommand[PITCH] = posControl.rcAdjustment[PITCH] / 2;
-            rcCommand[ROLL] = posControl.rcAdjustment[ROLL] / 2;
-        }
+
+    // Convert target angle (rcAdjustment) to rcCommand, account for the way PID controllers treat the value
+    if (posControl.pidProfile->pidController == PID_CONTROLLER_LUX_FLOAT) {
+        // LuxFloat is the only PID controller that uses raw rcCommand as target angle
+        rcCommand[PITCH] = posControl.rcAdjustment[PITCH];
+        rcCommand[ROLL] = posControl.rcAdjustment[ROLL];
+    }
+    else {
+        // Most PID controllers use 2 * rcCommand as target angle for ANGLE mode
+        rcCommand[PITCH] = posControl.rcAdjustment[PITCH] / 2;
+        rcCommand[ROLL] = posControl.rcAdjustment[ROLL] / 2;
     }
 }
 
