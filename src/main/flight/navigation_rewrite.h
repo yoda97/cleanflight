@@ -141,6 +141,7 @@ void navigationUseConfig(navConfig_t *navConfigToUse);
 void navigationUseRcControlsConfig(rcControlsConfig_t *initialRcControlsConfig);
 void navigationUseRxConfig(rxConfig_t * initialRxConfig);
 void navigationUseEscAndServoConfig(escAndServoConfig_t * initialEscAndServoConfig);
+void navigationUseYawControlDirection(uint8_t initialYawControlDirection);
 void navigationInit(navConfig_t *initialnavConfig,
                     pidProfile_t *initialPidProfile,
                     rcControlsConfig_t *initialRcControlsConfig,
