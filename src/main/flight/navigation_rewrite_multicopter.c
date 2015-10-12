@@ -360,8 +360,8 @@ static void updatePositionLeanAngleFromRCInput_MC()
 
     if (rcPitchAdjustment || rcRollAdjustment) {
         // Direct attitude control
-        posControl.rcAdjustment[ROLL] = rcCommand[ROLL];
-        posControl.rcAdjustment[PITCH] = rcCommand[PITCH];
+        posControl.rcAdjustment[ROLL] = rcCommandToLeanAngle(rcCommand[ROLL]);
+        posControl.rcAdjustment[PITCH] = rcCommandToLeanAngle(rcCommand[PITCH]);
 
         // If we are in position hold mode, so adjust poshold position
         if (navShouldApplyPosHold()) {
@@ -545,18 +545,8 @@ void applyMulticopterPositionController(uint32_t currentTime)
         updatePositionLeanAngleFromRCInput_MC();
     }
 
-
-    // Convert target angle (rcAdjustment) to rcCommand, account for the way PID controllers treat the value
-    if (posControl.pidProfile->pidController == PID_CONTROLLER_LUX_FLOAT) {
-        // LuxFloat is the only PID controller that uses raw rcCommand as target angle
-        rcCommand[PITCH] = posControl.rcAdjustment[PITCH];
-        rcCommand[ROLL] = posControl.rcAdjustment[ROLL];
-    }
-    else {
-        // Most PID controllers use 2 * rcCommand as target angle for ANGLE mode
-        rcCommand[PITCH] = posControl.rcAdjustment[PITCH] / 2;
-        rcCommand[ROLL] = posControl.rcAdjustment[ROLL] / 2;
-    }
+    rcCommand[PITCH] = leanAngleToRcCommand(posControl.rcAdjustment[PITCH]);
+    rcCommand[ROLL] = leanAngleToRcCommand(posControl.rcAdjustment[ROLL]);
 }
 
 /*-----------------------------------------------------------

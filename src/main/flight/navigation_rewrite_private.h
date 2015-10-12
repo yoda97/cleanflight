@@ -243,6 +243,9 @@ void setHomePosition(t_fp_vector * pos, int32_t yaw);
 void setDesiredPosition(t_fp_vector * pos, int32_t yaw, navSetWaypointFlags_t useMask);
 bool isWaypointReached(navWaypointPosition_t *waypoint);
 
+int16_t rcCommandToLeanAngle(int16_t rcCommand);
+int16_t leanAngleToRcCommand(int16_t leanAngle);
+
 void updateActualHorizontalPositionAndVelocity(float newX, float newY, float newVelX, float newVelY);
 void updateActualAltitudeAndClimbRate(float newAltitude, float newVelocity);
 void updateActualHeading(int32_t newHeading);
