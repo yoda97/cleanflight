@@ -77,7 +77,7 @@
 #define navShouldApplyWaypoint() (IS_NAV_MODE_WP)
 #define navShouldApplyRTH()      (IS_NAV_MODE_RTH || IS_NAV_MODE_RTH_2D)
 // Should apply altitude PID controller
-#define navShouldApplyAltHold()  (IS_NAV_MODE_ALTHOLD || IS_NAV_MODE_POSHOLD_2D || IS_NAV_MODE_POSHOLD_3D || IS_NAV_MODE_WP || IS_NAV_MODE_RTH )
+#define navShouldApplyAltHold()  (IS_NAV_MODE_ALTHOLD || IS_NAV_MODE_POSHOLD_3D || IS_NAV_MODE_WP || IS_NAV_MODE_RTH )
 // Should apply RTH-specific logic
 #define navShouldApplyAutonomousLandingLogic()  ((IS_NAV_MODE_RTH || IS_NAV_MODE_WP) && \
                                                 (IS_NAV_AUTO_AUTOLAND || IS_NAV_AUTO_LANDED || IS_NAV_AUTO_FINISHED))
