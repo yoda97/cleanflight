@@ -80,7 +80,7 @@
 #define navShouldApplyAltHold()  (IS_NAV_MODE_ALTHOLD || IS_NAV_MODE_POSHOLD_3D || IS_NAV_MODE_WP || IS_NAV_MODE_RTH )
 // Should apply RTH-specific logic
 #define navShouldApplyAutonomousLandingLogic()  ((IS_NAV_MODE_RTH || IS_NAV_MODE_WP) && \
-                                                (IS_NAV_AUTO_AUTOLAND || IS_NAV_AUTO_LANDED || IS_NAV_AUTO_FINISHED))
+                                                 (IS_NAV_AUTO_AUTOLAND || IS_NAV_AUTO_LANDED || IS_NAV_AUTO_FINISHED))
 // Should NAV apply emergency landing sequence
 #define navShouldApplyEmergencyLanding() ((IS_NAV_MODE_RTH || IS_NAV_MODE_RTH_2D || IS_NAV_MODE_WP) && IS_NAV_EMERG_LANDING)
 
@@ -272,6 +272,7 @@ void resetMulticopterPositionController(void);
 void applyMulticopterPositionController(uint32_t currentTime);
 void applyMulticopterEmergencyLandingController(void);
 bool isMulticopterLandingDetected(uint32_t * landingTimer);
+void updateMulticopterSpecificData(uint32_t currentTime);
 
 /* Fixed-wing specific functions */
 void setupFixedWingAltitudeController(void);
@@ -283,3 +284,4 @@ void resetFixedWingPositionController(void);
 void applyFixedWingPositionController(uint32_t currentTime);
 void applyFixedWingEmergencyLandingController(void);
 bool isFixedWingLandingDetected(uint32_t * landingTimer);
+void updateFixedWingSpecificData(uint32_t currentTime);
