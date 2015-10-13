@@ -18,7 +18,6 @@
 #pragma once
 
 #define DISTANCE_BETWEEN_TWO_LONGITUDE_POINTS_AT_EQUATOR    1.113195f  // MagicEarthNumber from APM
-#define NAV_GRAVITY_CMSS                                    980.665f
 
 #define LAND_DETECTOR_TRIGGER_TIME_MS       2000
 

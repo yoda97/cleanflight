@@ -467,8 +467,8 @@ static void updatePositionLeanAngleController_MC(void)
     float accelRight = -posControl.desiredState.acc.V.X * sinYaw + posControl.desiredState.acc.V.Y * cosYaw;
 
     // Calculate banking angles
-    float desiredPitch = atan2_approx(accelForward, NAV_GRAVITY_CMSS) / RADX100;
-    float desiredRoll = atan2_approx(accelRight * cos_approx(desiredPitch * RADX100), NAV_GRAVITY_CMSS) / RADX100;
+    float desiredPitch = atan2_approx(accelForward, GRAVITY_CMSS) / RADX100;
+    float desiredRoll = atan2_approx(accelRight * cos_approx(desiredPitch * RADX100), GRAVITY_CMSS) / RADX100;
 
     posControl.rcAdjustment[ROLL] = constrainf(desiredRoll, -NAV_ROLL_PITCH_MAX, NAV_ROLL_PITCH_MAX) * 0.1f;
     posControl.rcAdjustment[PITCH] = constrainf(desiredPitch, -NAV_ROLL_PITCH_MAX, NAV_ROLL_PITCH_MAX) * 0.1f;

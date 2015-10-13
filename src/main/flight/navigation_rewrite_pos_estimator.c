@@ -108,10 +108,18 @@ typedef struct {
 } navPosisitonEstimatorHistory_t;
 
 typedef struct {
+    t_fp_vector     accelNEU;
+    t_fp_vector     accelBias;
+} navPosisitonEstimatorIMU_t;
+
+typedef struct {
     // Data sources
     navPositionEstimatorGPS_t   gps;
     navPositionEstimatorBARO_t  baro;
     navPositionEstimatorSONAR_t sonar;
+
+    // IMU data
+    navPosisitonEstimatorIMU_t  imu;
 
     // Estimate
     navPositionEstimatorESTIMATE_t  est;
@@ -320,6 +328,33 @@ static void updateSonarTopic(uint32_t currentTime)
 #endif
 
 /**
+ * Update IMU topic
+ *  Function is called at main loop rate
+ */
+static void updateIMUTopic(uint32_t currentTime)
+{
+    t_fp_vector accelBF;
+
+    /* Read acceleration data in body frame */
+    accelBF.V.X = imuAverageAcceleration.V.X;
+    accelBF.V.Y = imuAverageAcceleration.V.Y;
+    accelBF.V.Z = imuAverageAcceleration.V.Z;
+
+    /* Correct accelerometer bias */
+    accelBF.V.X -= posEstimator.imu.accelBias.V.X;
+    accelBF.V.Y -= posEstimator.imu.accelBias.V.Y;
+    accelBF.V.Z -= posEstimator.imu.accelBias.V.Z;
+
+    /* Rotate vector to Earth frame - from Forward-Right-Down to North-East-Up*/
+    imuTransformVectorBodyToEarth(&accelBF);
+
+    /* Read acceleration data in NEU frame from IMU */
+    posEstimator.imu.accelNEU.V.X = accelBF.V.X;
+    posEstimator.imu.accelNEU.V.Y = accelBF.V.Y;
+    posEstimator.imu.accelNEU.V.Z = accelBF.V.Z - GRAVITY_CMSS;
+}
+
+/**
  * Calculate next estimate using IMU and apply corrections from reference sensors (GPS, BARO etc)
  *  Function is called at main loop rate
  */
@@ -363,7 +398,7 @@ static void updateEstimatedTopic(uint32_t currentTime)
     /* Estimate Z-axis */
     if ((posEstimator.est.epv < posControl.navConfig->inav.max_eph_epv) || useGpsZ || isBaroValid || isSonarValid) {
         /* Predict position/velocity based on acceleration */
-        inavFilterPredict(Z, dt, imuAverageAcceleration.V.Z);
+        inavFilterPredict(Z, dt, posEstimator.imu.accelNEU.V.Z);
 
         /* Compute sonar/baro transition factor */
 #if defined(BARO) && defined(SONAR)
@@ -452,8 +487,8 @@ static void updateEstimatedTopic(uint32_t currentTime)
     /* Estimate XY-axis */
     if ((posEstimator.est.eph < posControl.navConfig->inav.max_eph_epv) || isGPSValid || useDeadReckoning) {
         /* Predict position */
-        inavFilterPredict(X, dt, imuAverageAcceleration.V.X);
-        inavFilterPredict(Y, dt, imuAverageAcceleration.V.Y);
+        inavFilterPredict(X, dt, posEstimator.imu.accelNEU.V.X);
+        inavFilterPredict(Y, dt, posEstimator.imu.accelNEU.V.Y);
 
         /* Correct position */
         if (isGPSValid) {
@@ -538,6 +573,10 @@ void initializePositionEstimator(void)
 
     posEstimator.history.index = 0;
 
+    posEstimator.imu.accelBias.V.X = 0;
+    posEstimator.imu.accelBias.V.Y = 0;
+    posEstimator.imu.accelBias.V.Z = 0;
+
     memset(&posEstimator.history.pos[0], 0, sizeof(posEstimator.history.pos));
     memset(&posEstimator.history.vel[0], 0, sizeof(posEstimator.history.vel));
 }
@@ -587,6 +626,9 @@ void updatePositionEstimator(void)
 #if defined(SONAR)
     updateSonarTopic(currentTime);
 #endif
+
+    /* Read updates from IMU, preprocess */
+    updateIMUTopic(currentTime);
 
     /* Update estimate */
     updateEstimatedTopic(currentTime);

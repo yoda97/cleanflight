@@ -19,11 +19,12 @@
 
 #include "flight/pid.h"
 
+#define GRAVITY_CMSS    980.665f
+
 extern int16_t throttleAngleCorrection;
 extern t_fp_vector EstG;
 extern int16_t accSmooth[XYZ_AXIS_COUNT];
 extern int16_t smallAngle;
-extern t_fp_vector imuAverageVelocity;
 extern t_fp_vector imuAverageAcceleration;
 
 typedef struct rollAndPitchInclination_s {
@@ -57,5 +58,7 @@ int16_t calculateTiltAngle(void);
 float calculateAccLowPassFilterRCTimeConstant(float acc_lpf_cutoff);
 float calculateCosTiltAngle(void);
 
+void imuTransformVectorBodyToEarth(t_fp_vector * v);
+void imuTransformVectorEarthToBody(t_fp_vector * v);
+
 int16_t imuCalculateHeading(t_fp_vector *vec);
-void imuApplyFilterToActualVelocity(uint8_t axis, float cfFactor, float referenceVelocity);
