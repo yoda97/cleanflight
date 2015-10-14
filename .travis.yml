@@ -1,23 +1,23 @@
 env:
-  - RUNTESTS=True
-  - PUBLISHMETA=True
-  - PUBLISHDOCS=True
-  - TARGET=CC3D
-  - TARGET=CC3D OPBL=yes
-  - TARGET=COLIBRI_RACE
-  - TARGET=CHEBUZZF3
-  - TARGET=CJMCU
-  - TARGET=EUSTM32F103RC
-  - TARGET=SPRACINGF3
+  - RUNTESTS=False
+  - PUBLISHMETA=False
+  - PUBLISHDOCS=False
+  #- TARGET=CC3D
+  #- TARGET=CC3D OPBL=yes
+  #- TARGET=COLIBRI_RACE
+  #- TARGET=CHEBUZZF3
+  #- TARGET=CJMCU
+  #- TARGET=EUSTM32F103RC
+  #- TARGET=SPRACINGF3
   - TARGET=NAZE
-  - TARGET=NAZE32PRO
-  - TARGET=OLIMEXINO
-  - TARGET=RMDO
-  - TARGET=PORT103R
-  - TARGET=SPARKY
-  - TARGET=STM32F3DISCOVERY
-  - TARGET=ALIENWIIF1
-  - TARGET=ALIENWIIF3
+  #- TARGET=NAZE32PRO
+  #- TARGET=OLIMEXINO
+  #- TARGET=RMDO
+  #- TARGET=PORT103R
+  #- TARGET=SPARKY
+  #- TARGET=STM32F3DISCOVERY
+  #- TARGET=ALIENWIIF1
+  #- TARGET=ALIENWIIF3
 
 # use new docker environment
 sudo: false
@@ -49,3 +49,10 @@ script: ./.travis.sh
 
 cache: apt
 
+deploy:
+  provider: releases
+  api_key: "99fac3bf92ef35bfae33a7d7ddcaddb17c3a80e7"
+  file: "cleanflight_NAZE.hex"
+  skip_cleanup: true
+  on:
+    tags: true
