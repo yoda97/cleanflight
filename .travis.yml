@@ -1,7 +1,7 @@
 env:
-  - RUNTESTS=False
-  - PUBLISHMETA=False
-  - PUBLISHDOCS=False
+  #- RUNTESTS=False
+  #- PUBLISHMETA=False
+  #- PUBLISHDOCS=False
   #- TARGET=CC3D
   #- TARGET=CC3D OPBL=yes
   #- TARGET=COLIBRI_RACE
