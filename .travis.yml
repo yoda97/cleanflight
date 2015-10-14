@@ -52,7 +52,7 @@ cache: apt
 deploy:
   provider: releases
   api_key: "99fac3bf92ef35bfae33a7d7ddcaddb17c3a80e7"
-  file: "cleanflight_NAZE.hex"
+  file: "NAZE.hex"
   skip_cleanup: true
   on:
     tags: true
