@@ -49,7 +49,3 @@ script: ./.travis.sh
 
 cache: apt
 
-notifications:
-  irc: "chat.freenode.net#cleanflight"
-  use_notice: true
-  skip_join: true
