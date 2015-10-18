@@ -51,8 +51,8 @@ cache: apt
 
 deploy:
   provider: releases
-  api_key: "2179636ac9478d2678234461a9d6c3cf814a7fa8"
-  file: "NAZE.hex"
+  api_key: "GITHUB OAUTH TOKEN"
+  file: "FILE TO UPLOAD"
   skip_cleanup: true
   on:
     tags: true
